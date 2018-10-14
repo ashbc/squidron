@@ -81,7 +81,7 @@ states = {
 	menu = {
 		load = function()
 			-- TODO: REMOVE THIS
-			loadState('game')
+			-- loadState('game')
 		end,
 		update = function(dt) end,
 		draw = function()
