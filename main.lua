@@ -80,8 +80,7 @@ end
 states = {
 	menu = {
 		load = function()
-			-- TODO: REMOVE THIS
-			-- loadState('game')
+			loadState('interim')
 		end,
 		update = function(dt) end,
 		draw = function()
@@ -104,7 +103,6 @@ states = {
 			if state.age > 1 then loadState('game') end
 		end,
 		draw = function()
-			-- local fade
 			love.graphics.draw(state.icon, 0, 0)
 		end
 	},
@@ -129,40 +127,9 @@ states = {
 			state.sprites = {}
 			state.sprites.player = love.graphics.newImage('player.png')
 			state.sprites.reticle = love.graphics.newImage('reticle.png')
-
 			state.sprites.level = love.graphics.newImage('level.png')
-
-			-- unfinished collision stuff
-			--[[
-			-- generate the collision data
-			local coll = {}
-			-- what parts of the level are painted
-			local paint = {}
-			local i = love.image.newImageData('collision.png')
-			i:mapPixel(function(x, y, r, g, b, a)
-				if paint[x] == nil then
-					paint[x] = {}
-				end
-				-- TODO: ??
-				if a == 1 and b == 0 then
-					if r == 1 and g == 0 then
-						-- red: solid collision
-						if coll[x] == nil then coll[x] = {} end
-						coll[x][y] = 1
-					elseif g == 1 and r == 0 then
-						-- green: platform
-						if coll[x] == nil then coll[x] = {} end
-						coll[x][y] = 0.5
-					end
-				end
-				return r, g, b, a
-			end)
-			]]
 			state.projectiles = {}
-
 			state.actors = {}
-
-			-- state.splats = {}
 			state.inkCanvas = love.graphics.newCanvas(2048, 2048)
 
 			-- make some NPCs
@@ -194,7 +161,7 @@ states = {
 				local dx, dy, l2, aimx, aimy, r2 = j:getAxes()
 
 				state.player.isSquid = (l2 > 0)
-
+				
 				-- movement
 				if -deadzone < dx and dx < deadzone then
 					dx = 0
@@ -216,12 +183,11 @@ states = {
 						or 0.5
 					)
 					or 1
-				print(squidSpeed)
 				dx = dx * speed * squidSpeed
 				dy = dy * speed * squidSpeed
 				local newx = state.player.x + dx
 				local newy = state.player.y + dy
-				
+
 				local canMove = true
 				for i, v in ipairs(state.actors) do
 					if circlesIntersect(
@@ -239,25 +205,6 @@ states = {
 					state.player.y = newy
 				end
 
-				-- move other stuff
-				local projectilesToKill = {}
-				for i, v in ipairs(state.projectiles) do
-					v.age = v.age + dt
-					v.splatTime = v.splatTime + dt
-					if v.splatFreq <= v.splatTime then
-						splat(v.position.x, v.position.y, v.size, v.color)
-						v.splatTime = 0
-					end
-					if v.lifetime <= v.age then
-						-- mark for removal
-						table.insert(projectilesToKill, i)
-					else
-						v.position.x = v.position.x + (v.direction.x * v.speed)
-						v.position.y = v.position.y + (v.direction.y * v.speed)
-					end
-				end
-				
-
 				if -deadzone < aimx and aimx < deadzone then
 					aimx = 0
 				end
@@ -270,27 +217,6 @@ states = {
 					state.player.aimx = aimx / mag
 					state.player.aimy = aimy / mag
 				end
-
-				-- people getting hit
-				local actorsToKill = {}
-				for i, proj in ipairs(state.projectiles) do
-					for j, actor in ipairs(state.actors) do
-						if pointInsideCircle(
-							proj.position.x, proj.position.y,
-							actor.position.x, actor.position.y,
-							actor.radius
-						) then
-							-- hit detected...
-							-- for now just kill
-							splat(
-								actor.position.x, actor.position.y,
-								6, proj.color
-							)
-							table.insert(actorsToKill, j)
-						end
-					end
-				end
-
 				-- shooting
 				state.player.shootTimer = state.player.shootTimer + dt
 				if (not state.player.isSquid) and r2 > 0 and state.player.shootTimer > state.player.shootMax then
@@ -304,16 +230,52 @@ states = {
 					})
 					table.insert(state.projectiles, proj)
 				end
+			end
 
-				-- remove stuff
-				-- we can't do this inside earlier loops
-				-- note that "v" here is actually the object's index
-				for i, v in ipairs(projectilesToKill) do
-					table.remove(state.projectiles, v)
+			-- move other stuff
+			local projectilesToKill = {}
+			for i, v in ipairs(state.projectiles) do
+				v.age = v.age + dt
+				v.splatTime = v.splatTime + dt
+				if v.splatFreq <= v.splatTime then
+					splat(v.position.x, v.position.y, v.size, v.color)
+					v.splatTime = 0
 				end
-				for i, v in ipairs(actorsToKill) do
-					table.remove(state.actors, v)
+				if v.lifetime <= v.age then
+					-- mark for removal
+					table.insert(projectilesToKill, i)
+				else
+					v.position.x = v.position.x + (v.direction.x * v.speed)
+					v.position.y = v.position.y + (v.direction.y * v.speed)
 				end
+			end
+			-- people getting hit
+			local actorsToKill = {}
+			for i, proj in ipairs(state.projectiles) do
+				for j, actor in ipairs(state.actors) do
+					if pointInsideCircle(
+						proj.position.x, proj.position.y,
+						actor.position.x, actor.position.y,
+						actor.radius
+					) then
+						-- hit detected...
+						-- for now just kill
+						splat(
+							actor.position.x, actor.position.y,
+							6, proj.color
+						)
+						table.insert(actorsToKill, j)
+					end
+				end
+			end
+			-- remove stuff
+			-- we can't do this inside earlier loops
+			-- note that "v" here is actually the object's index
+			for i, v in ipairs(projectilesToKill) do
+				table.remove(state.projectiles, v)
+			end
+			for i, v in ipairs(actorsToKill) do
+				table.remove(state.actors, v)
 			end
 		end,
 		draw = function()
@@ -321,18 +283,8 @@ states = {
 				-- level
 				love.graphics.setColor(1, 1, 1, 1)
 				love.graphics.draw(state.sprites.level, 0, 0)
-				
+
 				love.graphics.draw(state.inkCanvas, 0, 0)
-				-- ink
-				--[[ for i, v in ipairs(state.splats) do
-					love.graphics.setColor(v.color)
-					love.graphics.circle(
-						'fill',
-						v.position.x,
-						v.position.y,
-						v.radius
-					)
-				end ]]
 
 				-- player
 					love.graphics.setColor(state.player.color)
@@ -352,6 +304,7 @@ states = {
 						state.player.size
 					)
 				end
+
 				-- mobs
 				for i, v in ipairs(state.actors) do
 					love.graphics.setColor(v.color)
@@ -424,4 +377,3 @@ function love.gamepadpressed(joystick, button)
 	local f = state.gamepadpressed
 	if f ~= nil then f(joystick, button) end
 end
-
