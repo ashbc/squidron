@@ -4,6 +4,7 @@
 
 local inspect = require('lib/inspect')
 
+-- bounding-box collision
 function checkCollision(x1,y1,w1,h1, x2,y2,w2,h2)
   return x1 < x2+w2 and
          x2 < x1+w1 and
@@ -24,6 +25,7 @@ function circlesIntersect(x1, y1, r1, x2, y2, r2)
 	return (dx * dx) + (dy * dy) <= (sr * sr)
 end
 
+-- determines whether a squid is in their team's ink
 function isSquidInInk(x, y, color)
 	local nine = state.inkCanvas:newImageData(nil, 1, x-4, y-4, 8, 8)
 	local goodCount = 0
@@ -56,7 +58,7 @@ function newProjectile(o)
 		color = o.color or {0, 1, 0, 1},
 		age = 0,
 		splatFreq = splatFreq,
-		splatTime = love.math.random(0, splatFreq)
+		splatTime = love.math.random(0, splatFreq) -- could just be 0...
 	}
 end
 
@@ -69,6 +71,7 @@ function newActor(o)
 	}
 end
 
+-- adds ink to the canvas
 function splat(x, y, size, color)
 	-- table.insert(state.splats, {position = {x = x, y = y}, radius = size, color = color})
 	love.graphics.setCanvas(state.inkCanvas)
@@ -80,6 +83,7 @@ end
 states = {
 	menu = {
 		load = function()
+			-- temp
 			loadState('interim')
 		end,
 		update = function(dt) end,
@@ -337,13 +341,15 @@ states = {
 	}
 }
 
-state = {}
+function trycall(f, ...)
+	if f then f(...) end
+end
 
+state = {}
 function loadState(name)
 	local s = states[name]
 	state = s
-	local l = s.load
-	if l ~= nil then l() end
+	trycall(s.load)
 end
 
 function love.load()
@@ -352,28 +358,26 @@ end
 
 -- state passthroughs
 function love.update(dt)
-	state.update(dt)
+	trycall(state.update, dt)
 end
 
 function love.draw()
-	state.draw()
+	trycall(state.draw)
 end
 
 function love.keypressed(key, scancode, isrepeat)
-	local f = state.keypressed
-	if f ~= nil then f(key, scancode, isrepeat) end
+	trycall(state.keypressed, key, scancode, isrepeat)
 end
 
 function love.keyreleased(key, scancode)
 	if key == 'escape' then
 		love.event.quit()
 	else
-		local f = state.keyreleased
-		if f ~= nil then f(key, scancode) end
+		trycall(state.keyreleased, key, scancode)
 	end
 end
 
 function love.gamepadpressed(joystick, button)
-	local f = state.gamepadpressed
-	if f ~= nil then f(joystick, button) end
+	trycall(state.gamepadpressed, joystick, button)
 end
+
