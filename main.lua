@@ -3,34 +3,14 @@
 -- Requires Love2D >=11.0
 
 local inspect = require('lib/inspect')
-
--- bounding-box collision
-function checkCollision(x1,y1,w1,h1, x2,y2,w2,h2)
-  return x1 < x2+w2 and
-         x2 < x1+w1 and
-         y1 < y2+h2 and
-         y2 < y1+h1
-end
-
-function pointInsideCircle(px, py, rx, ry, r)
-	local dx = px - rx
-	local dy = py - ry
-	return (dx * dx) + (dy * dy) <= (r * r)
-end
-
-function circlesIntersect(x1, y1, r1, x2, y2, r2)
-	local dx = x1 - x2
-	local dy = y1 - y2
-	local sr = r1 + r2
-	return (dx * dx) + (dy * dy) <= (sr * sr)
-end
+local util = require('./util')
 
 -- determines whether a squid is in their team's ink
 function isSquidInInk(x, y, color)
-	local nine = state.inkCanvas:newImageData(nil, 1, x-4, y-4, 8, 8)
+	local surroundings = state.inkCanvas:newImageData(nil, 1, x-4, y-4, 8, 8)
 	local goodCount = 0
 	local badCount = 0
-	nine:mapPixel(function(x2, y2, r, g, b, a)
+	surroundings:mapPixel(function(x2, y2, r, g, b, a)
 		if a > 0 then
 			if r == color[1]
 				and g == color[2]
@@ -194,7 +174,7 @@ states = {
 
 				local canMove = true
 				for i, v in ipairs(state.actors) do
-					if circlesIntersect(
+					if util.circlesIntersect(
 						newx, newy,
 						state.player.size,
 						v.position.x, v.position.y,
@@ -236,7 +216,7 @@ states = {
 				end
 			end
 
-			-- move other stuff
+			-- move and age projectiles
 			local projectilesToKill = {}
 			for i, v in ipairs(state.projectiles) do
 				v.age = v.age + dt
@@ -253,11 +233,11 @@ states = {
 					v.position.y = v.position.y + (v.direction.y * v.speed)
 				end
 			end
-			-- people getting hit
+			-- handle collisions
 			local actorsToKill = {}
 			for i, proj in ipairs(state.projectiles) do
 				for j, actor in ipairs(state.actors) do
-					if pointInsideCircle(
+					if util.pointInsideCircle(
 						proj.position.x, proj.position.y,
 						actor.position.x, actor.position.y,
 						actor.radius
@@ -291,14 +271,15 @@ states = {
 				love.graphics.draw(state.inkCanvas, 0, 0)
 
 				-- player
-					love.graphics.setColor(state.player.color)
-					love.graphics.circle(
-						'fill',
-						state.player.x,
-						state.player.y,
-						state.player.size
-					)
+				love.graphics.setColor(state.player.color)
+				love.graphics.circle(
+					'fill',
+					state.player.x,
+					state.player.y,
+					state.player.size
+				)
 
+				-- outline circle in white
 				if not state.player.isSquid then
 					love.graphics.setColor(1, 1, 1, 1)
 					love.graphics.circle(
