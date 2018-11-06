@@ -191,6 +191,12 @@ states = {
 					end
 				end
 			end
+
+			-- let actors act
+			for i, v in ipairs(state.actors) do
+				trycall(v.act)
+			end
+
 			-- remove stuff
 			-- we can't do this inside earlier loops
 			-- note that "v" here is actually the object's index
