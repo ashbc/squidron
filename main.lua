@@ -109,7 +109,6 @@ states = {
 			state.player.shootMax = 0.1 -- seconds
 
 			state.sprites = {}
-			state.sprites.player = love.graphics.newImage('player.png')
 			state.sprites.reticle = love.graphics.newImage('reticle.png')
 			state.sprites.level = love.graphics.newImage('level.png')
 			state.projectiles = {}
@@ -145,7 +144,7 @@ states = {
 				local dx, dy, l2, aimx, aimy, r2 = j:getAxes()
 
 				state.player.isSquid = (l2 > 0)
-				
+
 				-- movement
 				if -deadzone < dx and dx < deadzone then
 					dx = 0
@@ -361,4 +360,3 @@ end
 function love.gamepadpressed(joystick, button)
 	trycall(state.gamepadpressed, joystick, button)
 end
-
